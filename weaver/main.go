@@ -18,11 +18,12 @@ import (
 	"syscall"
 )
 
+var version = "(unreleased version)"
+
 func main() {
 
 	log.SetPrefix(weave.Protocol + " ")
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-	log.Println(os.Args)
 
 	procs := runtime.NumCPU()
 	// packet sniffing can block an OS thread, so we need one thread
@@ -33,17 +34,19 @@ func main() {
 	runtime.GOMAXPROCS(procs)
 
 	var (
-		ifaceName  string
-		routerName string
-		password   string
-		wait       int
-		debug      bool
-		prof       string
-		peers      []string
-		connLimit  int
-		bufSz      int
+		justVersion bool
+		ifaceName   string
+		routerName  string
+		password    string
+		wait        int
+		debug       bool
+		prof        string
+		peers       []string
+		connLimit   int
+		bufSz       int
 	)
 
+	flag.BoolVar(&justVersion, "version", false, "print version and exit")
 	flag.StringVar(&ifaceName, "iface", "", "name of interface to read from")
 	flag.StringVar(&routerName, "name", "", "name of router (defaults to MAC)")
 	flag.StringVar(&password, "password", "", "network password")
@@ -54,6 +57,13 @@ func main() {
 	flag.IntVar(&bufSz, "bufsz", 8, "capture buffer size in MB (defaults to 8MB)")
 	flag.Parse()
 	peers = flag.Args()
+
+	if justVersion {
+		io.WriteString(os.Stdout, fmt.Sprintf("weaver %s\n", version))
+		os.Exit(0)
+	}
+
+	log.Println(os.Args)
 
 	if ifaceName == "" {
 		fmt.Println("Missing required parameter 'iface'")
@@ -112,6 +122,7 @@ func main() {
 
 func handleHttp(router *weave.Router) {
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, fmt.Sprintln("weaver version", version))
 		io.WriteString(w, router.Status())
 	})
 	http.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
